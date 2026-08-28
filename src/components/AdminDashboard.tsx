@@ -47,21 +47,12 @@ import {
   GraduationCap,
   Search,
   RefreshCw,
+  Eye,
+  ExternalLink,
 } from 'lucide-react';
+import PaymentCardPreview, { type Payment } from './PaymentCardPreview';
 import { useToast } from '@/hooks/use-toast';
-
-interface Payment {
-  id: string;
-  reference: string;
-  nomComplet: string;
-  montant: string;
-  moyenPaiement: string;
-  datePaiement: string;
-  numeroQuittance: string;
-  statutPaiement: string;
-  service: string;
-  createdAt: string;
-}
+import { useRouter } from 'next/navigation';
 
 const emptyForm = {
   nomComplet: '',
@@ -84,6 +75,8 @@ export default function AdminDashboard() {
   const [qrDialogId, setQrDialogId] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [previewPayment, setPreviewPayment] = useState<Payment | null>(null);
+  const router = useRouter();
 
   const fetchPayments = useCallback(async () => {
     try {
@@ -427,7 +420,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredPayments.map((p, idx) => (
+                      {filteredPayments.map((p) => (
                         <TableRow key={p.id}>
                           <TableCell className="px-4 sm:px-6 font-mono text-xs text-gray-500">
                             #{p.id.slice(-4)}
@@ -452,6 +445,15 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell className="text-right px-4 sm:px-6">
                             <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setPreviewPayment(p)}
+                                title="Apercu apres scan"
+                              >
+                                <Eye className="h-4 w-4 text-cyan-700" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -518,6 +520,42 @@ export default function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Preview Dialog - Apercu apres scan */}
+      <Dialog open={!!previewPayment} onOpenChange={(open) => !open && setPreviewPayment(null)}>
+        <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden bg-transparent border-0 shadow-2xl">
+          <div className="bg-cyan-700 text-white px-5 py-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              <DialogTitle className="text-sm font-semibold">
+                Apercu : ce que verra l&apos;utilisateur apres le scan du QR code
+              </DialogTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              {previewPayment && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-cyan-100 hover:text-white hover:bg-cyan-600"
+                  onClick={() => {
+                    setPreviewPayment(null);
+                    router.push(`/?id=${previewPayment.id}`);
+                  }}
+                >
+                  <ExternalLink className="mr-1.5 h-3 w-3" />
+                  Ouvrir dans un nouvel onglet
+                </Button>
+              )}
+            </div>
+          </div>
+          {previewPayment && (
+            <PaymentCardPreview
+              payment={previewPayment}
+              onClose={() => setPreviewPayment(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* QR Code Dialog */}
       <Dialog open={!!qrDialogId} onOpenChange={(open) => !open && setQrDialogId(null)}>
