@@ -15,6 +15,8 @@ export interface Payment {
   numeroQuittance: string;
   statutPaiement: string;
   service: string;
+  documentPath: string | null;
+  documentName: string | null;
   createdAt: string;
 }
 
@@ -109,22 +111,24 @@ export default function PaymentCardPreview({ payment, onClose }: PaymentCardPrev
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-2.5 pt-3 border-t mt-5">
-                <Button
-                  className="bg-cyan-700 hover:bg-cyan-800 text-white flex-1"
-                  onClick={() => {
-                    const receiptContent = generateReceiptText(payment);
-                    const blob = new Blob([receiptContent], { type: 'text/plain;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `accuse_paiement_${payment.id.slice(-4)}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Telecharger l'accuse de paiement
-                </Button>
+                {payment.documentPath ? (
+                  <a
+                    href={payment.documentPath}
+                    download={payment.documentName || `accuse_paiement_${payment.id.slice(-4)}`}
+                    className="inline-flex items-center justify-center gap-2 bg-cyan-700 hover:bg-cyan-800 text-white flex-1 h-10 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <Download className="h-4 w-4" />
+                    Telecharger l'accuse de paiement
+                  </a>
+                ) : (
+                  <Button
+                    className="flex-1 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Aucun accuse de paiement
+                  </Button>
+                )}
                 {onClose && (
                   <Button
                     variant="outline"
@@ -183,22 +187,4 @@ function DetailRow({
   );
 }
 
-function generateReceiptText(p: Payment): string {
-  return `
-========================================
-       ACCUSE DE PAIEMENT
-       Universite de Dschang
-========================================
 
-Reference          : ${p.reference}
-Nom complet        : ${p.nomComplet}
-Montant            : ${p.montant}
-Moyen de paiement  : ${p.moyenPaiement || 'CAMPOST'}
-Date de paiement   : ${p.datePaiement}
-N de Quittance    : ${p.numeroQuittance}
-Statut             : ${p.statutPaiement}
-Service            : ${p.service}
-
-========================================
-`.trim();
-}

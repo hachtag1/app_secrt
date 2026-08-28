@@ -49,12 +49,28 @@ import {
   RefreshCw,
   Eye,
   ExternalLink,
+  FileText,
+  Upload,
+  X,
 } from 'lucide-react';
 import PaymentCardPreview, { type Payment } from './PaymentCardPreview';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useRef } from 'react';
 
-const emptyForm = {
+interface FormState {
+  nomComplet: string;
+  montant: string;
+  moyenPaiement: string;
+  datePaiement: string;
+  numeroQuittance: string;
+  statutPaiement: string;
+  service: string;
+  documentPath: string | null;
+  documentName: string | null;
+}
+
+const emptyForm: FormState = {
   nomComplet: '',
   montant: '',
   moyenPaiement: 'CAMPOST',
@@ -62,6 +78,8 @@ const emptyForm = {
   numeroQuittance: '',
   statutPaiement: 'PAYE',
   service: '',
+  documentPath: null,
+  documentName: null,
 };
 
 export default function AdminDashboard() {
@@ -76,6 +94,8 @@ export default function AdminDashboard() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [previewPayment, setPreviewPayment] = useState<Payment | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const fetchPayments = useCallback(async () => {
@@ -95,6 +115,36 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
+
+  const handleFileUpload = async (file: File) => {
+    const allowed = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','image/png','image/jpeg','image/webp'];
+    if (!allowed.includes(file.type)) {
+      toast({ title: 'Fichier non autorisé', description: 'Formats acceptés : PDF, Word, PNG, JPEG, WebP', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'Fichier trop lourd', description: 'Taille maximale : 10 Mo', variant: 'destructive' });
+      return;
+    }
+    setUploadingDoc(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (res.ok) {
+        const data = await res.json();
+        setForm((prev) => ({ ...prev, documentPath: data.documentPath, documentName: data.documentName }));
+        toast({ title: 'Document ajouté', description: data.documentName });
+      } else {
+        const err = await res.json();
+        toast({ title: 'Erreur upload', description: err.error || 'Echec', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Upload échoué', variant: 'destructive' });
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!form.nomComplet || !form.montant || !form.service) {
@@ -146,6 +196,8 @@ export default function AdminDashboard() {
       numeroQuittance: p.numeroQuittance,
       statutPaiement: p.statutPaiement,
       service: p.service,
+      documentPath: p.documentPath,
+      documentName: p.documentName,
     });
     setFormOpen(true);
   };
@@ -325,6 +377,49 @@ export default function AdminDashboard() {
                         placeholder="Ex: 04R23362202607"
                       />
                     </div>
+                    {/* Upload accusé de paiement */}
+                    <div className="space-y-2">
+                      <Label>Accusé de paiement</Label>
+                      {form.documentPath ? (
+                        <div className="flex items-center gap-3 p-3 bg-cyan-50 border border-cyan-200 rounded-lg">
+                          <FileText className="h-5 w-5 text-cyan-700 shrink-0" />
+                          <span className="text-sm text-cyan-800 truncate flex-1" title={form.documentName || undefined}>
+                            {form.documentName}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-cyan-700 hover:text-red-500 shrink-0"
+                            onClick={() => setForm((prev) => ({ ...prev, documentPath: null, documentName: null }))}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-cyan-400 hover:bg-cyan-50/50 transition-colors"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" />
+                          <p className="text-sm text-gray-500">
+                            {uploadingDoc ? 'Envoi en cours...' : 'Cliquez pour joindre le document'}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">PDF, Word, PNG, JPEG, WebP (max 10 Mo)</p>
+                        </div>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
                     <Button
                       className="w-full bg-cyan-700 hover:bg-cyan-800 text-white"
                       onClick={handleSubmit}
@@ -425,7 +520,14 @@ export default function AdminDashboard() {
                           <TableCell className="px-4 sm:px-6 font-mono text-xs text-gray-500">
                             #{p.id.slice(-4)}
                           </TableCell>
-                          <TableCell className="font-medium">{p.nomComplet}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {p.nomComplet}
+                              {p.documentPath && (
+                                <FileText className="h-3.5 w-3.5 text-cyan-600 shrink-0" title={p.documentName || 'Document attaché'} />
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="hidden sm:table-cell">{p.montant}</TableCell>
                           <TableCell className="hidden md:table-cell text-gray-500">
                             {p.service}

@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
       numeroQuittance,
       statutPaiement = 'PAYE',
       service,
+      documentPath,
+      documentName,
     } = body;
 
     if (!nomComplet || !montant || !service) {
@@ -43,6 +45,8 @@ export async function POST(request: NextRequest) {
         numeroQuittance: numeroQuittance || '',
         statutPaiement,
         service,
+        documentPath: documentPath || null,
+        documentName: documentName || null,
       },
     });
 

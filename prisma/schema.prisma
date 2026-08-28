@@ -17,6 +17,8 @@ model Payment {
   numeroQuittance  String
   statutPaiement   String   @default("PAYE")
   service          String
+  documentPath     String?
+  documentName     String?
   qrCodeData       String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
