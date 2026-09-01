@@ -10,7 +10,7 @@ export async function GET(
 
     // In production, this would be your actual domain
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-    const paymentUrl = `${baseUrl}/?id=${id}`;
+    const paymentUrl = `${baseUrl}/details_paiement/${id}`;
 
     const qrDataUrl = await QRCode.toDataURL(paymentUrl, {
       width: 300,

@@ -1,18 +1,9 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import AdminDashboard from '@/components/AdminDashboard';
-import PaymentDetailView from '@/components/PaymentDetailView';
 
 function AppContent() {
-  const searchParams = useSearchParams();
-  const paymentId = searchParams.get('id');
-
-  if (paymentId) {
-    return <PaymentDetailView />;
-  }
-
   return <AdminDashboard />;
 }
 

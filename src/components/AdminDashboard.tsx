@@ -52,6 +52,7 @@ import {
   FileText,
   Upload,
   X,
+  Settings,
 } from 'lucide-react';
 import PaymentCardPreview, { type Payment } from './PaymentCardPreview';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +60,7 @@ import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
 
 interface FormState {
+  reference: string;
   nomComplet: string;
   montant: string;
   moyenPaiement: string;
@@ -71,6 +73,7 @@ interface FormState {
 }
 
 const emptyForm: FormState = {
+  reference: '',
   nomComplet: '',
   montant: '',
   moyenPaiement: 'CAMPOST',
@@ -98,6 +101,11 @@ export default function AdminDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  const [isAuth, setIsAuth] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsEmail, setSettingsEmail] = useState('');
+  const [settingsPassword, setSettingsPassword] = useState('');
+
   const fetchPayments = useCallback(async () => {
     try {
       const res = await fetch('/api/payments');
@@ -113,8 +121,25 @@ export default function AdminDashboard() {
   }, [toast]);
 
   useEffect(() => {
-    fetchPayments();
-  }, [fetchPayments]);
+    const auth = localStorage.getItem('adminAuth');
+    if (auth !== 'true') {
+      router.push('/login');
+    } else {
+      setIsAuth(true);
+      fetchPayments();
+    }
+  }, [fetchPayments, router]);
+
+  if (!isAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-pulse flex flex-col items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-cyan-700/20" />
+          <p className="text-gray-400 text-sm">Redirection vers la connexion...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleFileUpload = async (file: File) => {
     const allowed = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','image/png','image/jpeg','image/webp'];
@@ -189,6 +214,7 @@ export default function AdminDashboard() {
   const handleEdit = (p: Payment) => {
     setEditingId(p.id);
     setForm({
+      reference: p.reference,
       nomComplet: p.nomComplet,
       montant: p.montant,
       moyenPaiement: p.moyenPaiement,
@@ -247,9 +273,35 @@ export default function AdminDashboard() {
               <span className="text-xs text-gray-400">Panneau d'administration</span>
             </div>
           </div>
-          <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-            Administration
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+              Administration
+            </Badge>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-gray-500 hover:text-cyan-700"
+              onClick={() => {
+                setSettingsEmail(localStorage.getItem('adminEmail') || 'admin@univ-dschang.cm');
+                setSettingsPassword(localStorage.getItem('adminPassword') || 'admin');
+                setSettingsOpen(true);
+              }}
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Paramètres
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-gray-500 hover:text-red-600"
+              onClick={() => {
+                localStorage.removeItem('adminAuth');
+                router.push('/login');
+              }}
+            >
+              Se déconnecter
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -294,6 +346,15 @@ export default function AdminDashboard() {
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="reference">Référence (Optionnel)</Label>
+                      <Input
+                        id="reference"
+                        value={form.reference}
+                        onChange={(e) => setForm({ ...form, reference: e.target.value })}
+                        placeholder="Ex: 2fa672f7-2185-46b5-9e90-5d8e731a79cc (Vide = auto-généré)"
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="nomComplet">Nom complet *</Label>
                       <Input
@@ -641,7 +702,7 @@ export default function AdminDashboard() {
                   className="h-7 text-xs text-cyan-100 hover:text-white hover:bg-cyan-600"
                   onClick={() => {
                     setPreviewPayment(null);
-                    router.push(`/?id=${previewPayment.id}`);
+                    router.push(`/details_paiement/${previewPayment.id}`);
                   }}
                 >
                   <ExternalLink className="mr-1.5 h-3 w-3" />
@@ -685,6 +746,43 @@ export default function AdminDashboard() {
                 <p className="text-gray-400 text-sm">Génération en cours...</p>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Paramètres du compte</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Email de connexion</Label>
+              <Input 
+                value={settingsEmail} 
+                onChange={(e) => setSettingsEmail(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mot de passe</Label>
+              <Input 
+                type="text"
+                value={settingsPassword} 
+                onChange={(e) => setSettingsPassword(e.target.value)} 
+              />
+            </div>
+            <Button
+              className="w-full bg-cyan-700 hover:bg-cyan-800 text-white mt-2"
+              onClick={() => {
+                localStorage.setItem('adminEmail', settingsEmail);
+                localStorage.setItem('adminPassword', settingsPassword);
+                toast({ title: 'Succès', description: 'Identifiants mis à jour' });
+                setSettingsOpen(false);
+              }}
+            >
+              Sauvegarder
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

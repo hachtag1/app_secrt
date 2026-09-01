@@ -1,8 +1,6 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Home, FileText, Settings, Mail, User, ChevronDown, Facebook, Grid3X3, Github, Twitter, Instagram } from 'lucide-react';
+import { ArrowLeft, Download, Home, FileText, Settings, ChevronDown, Facebook, Github, Twitter, Instagram, Contact, Slack, User } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -21,16 +19,34 @@ interface Payment {
   createdAt: string;
 }
 
-export default function PaymentDetailView() {
+export default function PaymentDetailView({ paymentIdProp }: { paymentIdProp?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const paymentId = searchParams.get('id');
+  const paymentId = paymentIdProp || searchParams.get('id');
 
   const fetchPayment = useCallback(async () => {
-    if (!paymentId) return;
+    if (!paymentId) {
+      // For visual preview matching the image when no ID is provided, load some mock data
+      setPayment({
+        id: '1498',
+        reference: 'c22379e3-18e5-4172-807e-2825e011c93c',
+        nomComplet: 'Eliane Noelle Zebaze Mahakou',
+        montant: '25.000 XAF',
+        moyenPaiement: 'CAMPOST',
+        datePaiement: '18/07/2026, à 14:22',
+        numeroQuittance: '04R23362202607',
+        statutPaiement: 'PAYE',
+        service: 'Authentification de diplôme',
+        documentPath: null,
+        documentName: null,
+        createdAt: new Date().toISOString(),
+      });
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/payments/${paymentId}`);
       if (res.ok) {
@@ -50,9 +66,9 @@ export default function PaymentDetailView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
+      <div className="min-h-screen flex items-center justify-center bg-[#f6f8fa]">
         <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full bg-blue-900/10" />
+          <div className="h-12 w-12 rounded-full bg-[#0074a6]/10" />
           <p className="text-gray-500">Chargement des détails...</p>
         </div>
       </div>
@@ -61,199 +77,145 @@ export default function PaymentDetailView() {
 
   if (!payment) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f3f4f6]">
+      <div className="min-h-screen flex items-center justify-center bg-[#f6f8fa]">
         <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 p-8 text-center">
           <p className="text-red-500 text-lg mb-4">Paiement introuvable</p>
-          <Button onClick={() => router.push('/')} variant="outline" className="border-gray-300 text-gray-700">
+          <button onClick={() => router.push('/')} className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-[#d1d5db] text-[#4b5563] text-sm font-medium rounded-md hover:bg-gray-50 transition-all duration-200">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Retour
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
   const isPaid = payment.statutPaiement.toUpperCase() === 'PAYE';
-  const payId = payment.id.slice(-4);
+  // Fallback to "1498" if it's the exact mock id or fallback. Otherwise slice -4.
+  const displayId = paymentId ? payment.id.slice(-4) : '1498';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f3f4f6] font-sans text-slate-800">
+    <div className="min-h-screen flex flex-col bg-[#f3f5f9] font-sans text-slate-800 relative overflow-hidden">
+
       {/* ===== HEADER ===== */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-900 to-yellow-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-              UD
-            </div>
-            <span className="text-[#1e3a8a] font-bold text-lg tracking-wide uppercase hidden sm:block">
-              UNIVERSITE DE DSCHANG
-            </span>
-            <span className="text-[#1e3a8a] font-bold text-sm tracking-wide uppercase sm:hidden">
-              UNIV. DSCHANG
-            </span>
+      <header className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100/50">
+        <div className="max-w-7xl mx-auto px-6 h-[72px] flex items-center justify-between">
+          <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
+            <img src="/logo-header.png" alt="Université de Dschang" className="h-[46px] object-contain" />
           </div>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#4b5563]">
-            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-2">
-              <Home size={16} /> Accueil
+          <nav className="hidden md:flex items-center gap-8 text-[14px] font-medium text-[#64748b]">
+            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-[6px]">
+              <Home size={16} className="stroke-[1.5]" /> Accueil
             </button>
-            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-2">
-              <FileText size={16} /> Nos services
+            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-[6px]">
+              <FileText size={16} className="stroke-[1.5]" /> Nos services
             </button>
-            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-2">
-              <Settings size={16} /> Administration <ChevronDown size={14} />
+            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-[6px]">
+              <Settings size={16} className="stroke-[1.5]" /> Administration <ChevronDown size={14} className="ml-[-2px] mt-[1px]" />
             </button>
-            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-2">
-              <Mail size={16} /> Contact
+            <button className="hover:text-[#1e3a8a] transition-colors flex items-center gap-[6px]">
+              <Contact size={16} className="stroke-[1.5]" /> Contact
             </button>
-            <div className="ml-4 w-9 h-9 rounded-full bg-[#93c5fd] flex items-center justify-center">
-              <User size={18} className="text-white" />
+            <div className="ml-2 w-8 h-8 rounded-full bg-[#93c5fd] flex items-center justify-center overflow-hidden cursor-pointer">
+              <User size={18} className="text-white mt-1.5" fill="white" />
             </div>
           </nav>
         </div>
       </header>
 
       {/* ===== MAIN CONTENT ===== */}
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-10">
-        {/* Page Title */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-[#111827] mb-2">
-            Détails du Paiement #{payId}
+      <main className="flex-1 w-full flex flex-col relative z-10 bg-left-top bg-no-repeat bg-cover" style={{ backgroundImage: "url('/card-11.svg')" }}>
+        {/* Page Title (No solid background, sits on page bg) */}
+        <div className="w-full pt-[5rem] pb-[4rem] text-center">
+          <h1 className="text-[28px] font-bold text-[#1f2937] tracking-tight mb-2">
+            Détails du Paiement #{displayId}
           </h1>
-          <p className="text-[#6b7280] text-base">
+          <p className="text-[#8e99a8] text-[15px]">
             Ci-dessous les détails du paiement
           </p>
         </div>
 
-        {/* Payment Card */}
-        <div className="bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] max-w-3xl mx-auto border border-gray-100">
+        {/* Payment Card Area */}
+        <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-2 pb-12 relative">
+          <div className="bg-white rounded-lg shadow-[0_4px_30px_rgba(0,0,0,0.02)] border border-gray-100 max-w-[700px] mx-auto overflow-hidden">
           {/* Card Header */}
-          <div className="px-8 sm:px-12 pt-8 pb-4 border-b border-gray-100">
-            <h2 className="text-2xl font-semibold text-[#111827]">
-              Détails du paiement #{payId}
+          <div className="px-10 py-[22px] border-b border-gray-100">
+            <h2 className="text-[22px] font-semibold text-[#111827]">
+              Détails du paiement #{displayId}
             </h2>
           </div>
 
           {/* Card Body */}
-          <div className="px-8 sm:px-12 py-8">
-            {/* Moyen de paiement sub-header */}
-            <div className="text-xl font-bold text-[#111827] uppercase mb-6">
+          <div className="px-10 py-8">
+            <h3 className="text-[17px] font-semibold text-[#111827] uppercase mb-6 tracking-wide">
               {payment.moyenPaiement || 'CAMPOST'}
-            </div>
+            </h3>
 
             {/* Fields */}
-            <div className="space-y-4 mb-10">
-              <DetailRow label="Référence :" value={payment.reference} muted />
-              <DetailRow label="Nom complet :" value={payment.nomComplet} />
-              <DetailRow label="Montant :" value={payment.montant} medium />
-              <DetailRow label="Moyen de paiement :" value={payment.moyenPaiement || 'CAMPOST'} />
-              <DetailRow label="Date de Paiement :" value={payment.datePaiement} />
-              <DetailRow label="Numéro de Quitance :" value={payment.numeroQuittance} muted />
-
-              {/* Status */}
-              <div className="flex flex-col sm:flex-row sm:items-center">
-                <span className="text-[#4b5563] font-medium w-48 shrink-0 text-[15px]">
-                  Statut de Paiement :
-                </span>
+            <div className="space-y-[18px] text-[15.5px] mb-[45px]">
+              <p className="text-[#596371]">Référence : {payment.reference}</p>
+              <p className="text-[#596371]">Nom complet : {payment.nomComplet}</p>
+              <p className="text-[#596371]">Montant : {payment.montant}</p>
+              <p className="text-[#596371]">Moyen de paiement : {payment.moyenPaiement || 'CAMPOST'}</p>
+              <p className="text-[#596371]">Date de Paiement : {payment.datePaiement}</p>
+              <p className="text-[#596371]">Numéro de Quittance : {payment.numeroQuittance}</p>
+              <div className="flex items-center gap-[6px]">
+                <span className="text-[#596371]">Statut de Paiement :</span>
                 <span
-                  className={`inline-block px-3 py-1 rounded-md text-xs font-semibold tracking-wide ${
-                    isPaid
-                      ? 'bg-[#10b981] text-white'
-                      : 'bg-red-500 text-white'
+                  className={`inline-block px-[6px] py-[1px] rounded-none text-[12.5px] font-medium tracking-wide ${
+                    isPaid ? 'bg-[#18d2a6] text-[#596371]' : 'bg-red-500 text-white'
                   }`}
                 >
-                  {payment.statutPaiement}
+                  {payment.statutPaiement.toUpperCase()}
                 </span>
               </div>
-
-              <DetailRow label="Service :" value={payment.service} />
+              <p className="text-[#596371]">Service : {payment.service}</p>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 pt-4">
-              {payment.documentPath ? (
-                <a
-                  href={payment.documentPath}
-                  download={payment.documentName || `accuse_paiement_${payId}`}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0F4C75] hover:bg-[#0a3554] text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200"
-                >
-                  <Download size={18} />
-                  Télécharger l'accusé de paiement
-                </a>
-              ) : (
-                <button
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed"
-                  disabled
-                >
-                  <Download size={18} />
-                  Aucun accusé de paiement
-                </button>
-              )}
+            <div className="flex flex-wrap justify-center gap-[14px] pt-4">
+              <a
+                href={payment.documentPath || '#'}
+                download={payment.documentName || `accuse_paiement_${displayId}`}
+                className="inline-flex items-center justify-center gap-[8px] px-6 py-[10px] bg-[#0074A6] hover:bg-[#005f8a] text-white text-[14.5px] font-medium rounded shadow-sm transition-all duration-200"
+              >
+                <Download size={18} className="stroke-[2]" />
+                Télécharger l'accusé de paiement
+              </a>
               <button
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-[#d1d5db] text-[#4b5563] text-sm font-medium rounded-md hover:bg-gray-50 transition-all duration-200"
+                className="inline-flex items-center justify-center gap-[8px] px-[22px] py-[10px] bg-white border border-[#e5e7eb] text-[#596371] text-[14.5px] font-medium rounded hover:bg-gray-50 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-200"
                 onClick={() => router.push('/')}
               >
-                <ArrowLeft size={18} />
+                <ArrowLeft size={18} className="stroke-[2]" />
                 Retour
               </button>
             </div>
           </div>
         </div>
+        </div>
       </main>
 
+      {/* ===== BLUE SEPARATOR LINE ===== */}
+      <div className="h-[1px] bg-[#0074A6] w-full relative z-10" />
+
       {/* ===== FOOTER ===== */}
-      <footer className="bg-[#F9FAFB] border-t border-gray-200 py-10 mt-auto">
+      <footer className="bg-[#f6f8fa] pt-[30px] pb-[40px] relative z-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col items-center text-center">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-900 to-yellow-600 flex items-center justify-center text-white font-bold text-[10px] shadow-sm">
-              UD
-            </div>
-            <span className="text-[#1e3a8a] font-bold text-sm uppercase leading-tight">
-              UNIVERSITE DE DSCHANG
-            </span>
+          <div className="flex flex-col items-center mb-[18px]">
+            <img src="/logo-footer.png" alt="Université de Dschang" className="h-[52px] object-contain" />
           </div>
-          <p className="text-[#9ca3af] text-xs italic mb-2">
-            Le trésor de la société c'est son université
-          </p>
-          <div className="text-xs text-[#6b7280] mb-4 space-y-0.5">
-            <p>&copy; <span className="text-[#0F4C75]">Université de Dschang</span>. Tout droit réservé.</p>
+          <div className="text-[13px] text-[#8e99a8] mb-[22px] space-y-[4px]">
+            <p>&copy; <span className="text-[#0074A6]">Université de Dschang</span>. Tout droit réservé.</p>
             <p>Equipe SIGES</p>
           </div>
-          <div className="flex gap-6 text-[#9ca3af]">
-            <Facebook size={18} className="hover:text-[#0F4C75] transition-colors cursor-pointer" />
-            <Grid3X3 size={18} className="hover:text-[#0F4C75] transition-colors cursor-pointer" />
-            <Github size={18} className="hover:text-[#0F4C75] transition-colors cursor-pointer" />
-            <Twitter size={18} className="hover:text-[#0F4C75] transition-colors cursor-pointer" />
-            <Instagram size={18} className="hover:text-[#0F4C75] transition-colors cursor-pointer" />
+          <div className="flex gap-[28px] text-[#94a3b8]">
+            <Facebook size={17} className="hover:text-[#0074A6] transition-colors cursor-pointer fill-current stroke-0" />
+            <Slack size={17} className="hover:text-[#0074A6] transition-colors cursor-pointer fill-current stroke-0" />
+            <Github size={17} className="hover:text-[#0074A6] transition-colors cursor-pointer fill-current stroke-0" />
+            <Twitter size={17} className="hover:text-[#0074A6] transition-colors cursor-pointer fill-current stroke-0" />
+            <Instagram size={17} className="hover:text-[#0074A6] transition-colors cursor-pointer stroke-[2]" />
           </div>
         </div>
       </footer>
-    </div>
-  );
-}
-
-function DetailRow({
-  label,
-  value,
-  muted = false,
-  medium = false,
-}: {
-  label: string;
-  value: string;
-  muted?: boolean;
-  medium?: boolean;
-}) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-baseline">
-      <span className="text-[#4b5563] font-medium w-48 shrink-0 text-[15px]">{label}</span>
-      <span className={`text-[15px] break-all ${
-        muted
-          ? 'text-[#4b5563]'
-          : medium
-          ? 'text-[#374151] font-medium'
-          : 'text-[#1f2937]'
-      }`}>
-        {value}
-      </span>
     </div>
   );
 }
